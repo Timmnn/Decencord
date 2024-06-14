@@ -1,6 +1,9 @@
 #include <drogon/drogon.h>
+
+#include "iostream"
 using namespace drogon;
 int main() {
+  std::cout << "Hello, World!" << std::endl;
   app()
       .setLogPath("./")
       .setLogLevel(trantor::Logger::kWarn)
@@ -8,14 +11,11 @@ int main() {
       .setThreadNum(16)
       // Register the route
       .registerHandler(
-          "/test?username={name}",
+          "/",
           [](const HttpRequestPtr &req,
-             std::function<void(const HttpResponsePtr &)> &&callback,
-             const std::string &name) {
-            Json::Value json;
-            json["result"] = "ok";
-            json["message"] = std::string("hello,") + name;
-            auto resp = HttpResponse::newHttpJsonResponse(json);
+             std::function<void(const HttpResponsePtr &)> &&callback) {
+            auto resp = HttpResponse::newHttpResponse();
+            resp->setBody("Hello, World!");
             callback(resp);
           },
           {Get, "LoginFilter"})

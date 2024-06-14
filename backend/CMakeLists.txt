@@ -11,7 +11,6 @@ project(MyProject VERSION 1.0 LANGUAGES CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-find_package(Drogon CONFIG REQUIRED)
 
 add_executable(${PROJECT_NAME} ../src/main.cpp)
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -20,10 +19,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_EXTENSIONS NO
 )
 
-# Manually specify the include directory
-target_include_directories(${PROJECT_NAME} PRIVATE /Users/timmn/vcpkg/packages/drogon_arm64-osx/include)
+find_package(Drogon CONFIG REQUIRED)
+find_package(libpqxx CONFIG REQUIRED)
+
 
 # Link against Drogon
-target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon)
+target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon libpqxx::pqxx)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)

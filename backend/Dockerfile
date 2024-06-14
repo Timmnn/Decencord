@@ -19,6 +19,7 @@ RUN cd /vcpkg && ./bootstrap-vcpkg.sh
 
 # Install any dependencies using vcpkg, for example:
 RUN /vcpkg/vcpkg install drogon
+RUN /vcpkg/vcpkg install libpqxx
 
 
 # Stage 2: Application build
@@ -33,8 +34,10 @@ COPY . .
 RUN apt-get update && apt-get install -y cmake make git curl zip unzip tar ninja-build
 
 
+ENV VCPKG_ROOT=/vcpkg
+
 # Run cmake to configure the project and make to build it
-RUN sh -c "mkdir build && cd build && cmake -DCMAKE_TOOLCHAIN_FILE=/vcpkg/scripts/buildsystems/vcpkg.cmake .. && cmake --build ."
+RUN sh -c "rm build/ 2> /dev/null; mkdir build && cd build && cmake .. && cmake --build ."
 # For example, if the toolchain file is in your project directory:
 
 # Make port 80 available to the world outside this container

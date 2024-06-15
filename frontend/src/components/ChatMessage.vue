@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-   message: string;
+   content: string;
    sender: string;
    clientUsername: string;
 }>();
@@ -9,7 +9,7 @@ const props = defineProps<{
 <template>
    <div class="chat-message" :class="{ 'sent-by-me': props.sender === props.clientUsername }">
       <h3>{{ props.sender }}</h3>
-      <p>{{ props.message }}</p>
+      <p>{{ props.content }}</p>
    </div>
 </template>
 

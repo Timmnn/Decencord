@@ -1,6 +1,6 @@
 export interface ChatMessage {
    id: string;
-   message: string;
-   sender: string;
-   timestamp: Date;
+   content: string;
+   user_id: string;
+   created_at: Date;
 }

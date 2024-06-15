@@ -1,68 +1,52 @@
 <script setup lang="ts">
 type ChatMessageType = import("../types").ChatMessage;
 import ChatMessage from "./ChatMessage.vue";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const me = "Bob";
 
 const message_draft = ref<string>("");
 
-const chat = ref<ChatMessageType[]>([
-   {
-      message: "Hello, world!",
-      sender: "Alice",
-      id: "1",
-      timestamp: new Date(),
-   },
-   {
-      message: "Hi, Alice!",
-      sender: "Bob",
-      id: "2",
-      timestamp: new Date(),
-   },
-   {
-      message: "How are you?",
-      sender: "Alice",
-      id: "3",
-      timestamp: new Date(),
-   },
-   {
-      message: "I'm good, thanks!",
-      sender: "Bob",
-      id: "4",
-      timestamp: new Date(),
-   },
-   {
-      message: "How about you?",
-      sender: "Bob",
-      id: "5",
-      timestamp: new Date(),
-   },
-   {
-      message: "I'm good too!",
-      sender: "Alice",
-      id: "6",
-      timestamp: new Date(),
-   },
-]);
+const chat = ref<ChatMessageType[]>([]);
 
-function sendMessage() {
+function fetchMessages() {
+   fetch("http://localhost:8090/api/v1/messages", {
+      method: "GET",
+   })
+      .then(response => response.json())
+      .then(data => {
+         console.log(data);
+         chat.value = data.messages;
+      });
+}
+
+onMounted(() => {
+   fetchMessages();
+});
+
+async function sendMessage() {
+   // Create a new message object temporarily
    const new_message: ChatMessageType = {
-      message: message_draft.value,
-      sender: me,
+      content: message_draft.value,
+      user_id: me,
       id: chat.value.length.toString(),
-      timestamp: new Date(),
+      created_at: new Date(),
    };
 
-   fetch("http://localhost:8090/chat/", {
+   chat.value.push(new_message);
+
+   const returned_message = await fetch("http://localhost:8090/api/v1/messages", {
       method: "POST",
       headers: {
          "Content-Type": "application/json",
       },
       body: JSON.stringify({
-         message: new_message.message,
+         content: new_message.content,
       }),
-   });
+   }).then(response => response.json());
+
+   // Replace the temporary message with the returned message
+   chat.value[chat.value.length - 1] = returned_message;
 
    message_draft.value = "";
 }
@@ -72,7 +56,7 @@ function sendMessage() {
    <div class="chat">
       <h2>Chat</h2>
       <div v-for="message in chat" :key="message.id">
-         <ChatMessage :message="message.message" :sender="message.sender" :client-username="me" />
+         <ChatMessage :content="message.content" :sender="message.user_id" :client-username="me" />
       </div>
 
       <input type="text" placeholder="Type a message..." v-model="message_draft" />

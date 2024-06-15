@@ -22,8 +22,13 @@ COPY --from=build-stage /app/dist /usr/share/nginx/html
 EXPOSE 80
 
 
+
 # Optionally customize the default Nginx configuration
 # For example, to handle SPA routing:
+
+
+
+
 COPY nginx.conf /etc/nginx/nginx.conf 
 
 EXPOSE 80

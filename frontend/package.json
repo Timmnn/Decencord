@@ -1,22 +1,22 @@
 {
-  "name": "decencord",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "vue": "^3.4.21",
-    "vue-router": "4"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
-    "sass": "^1.77.5",
-    "typescript": "^5.2.2",
-    "vite": "^5.2.0",
-    "vue-tsc": "^2.0.6"
-  }
+   "name": "decencord",
+   "private": true,
+   "version": "0.0.0",
+   "type": "module",
+   "scripts": {
+      "dev": "vite",
+      "build": "vue-tsc && vite build",
+      "preview": "vite preview"
+   },
+   "dependencies": {
+      "vue": "^3.4.21",
+      "vue-router": "4"
+   },
+   "devDependencies": {
+      "@vitejs/plugin-vue": "^5.0.4",
+      "sass": "^1.77.5",
+      "typescript": "^5.2.2",
+      "vite": "^5.2.0",
+      "vue-tsc": "^2.0.6"
+   }
 }

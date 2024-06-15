@@ -10,7 +10,7 @@ const message_draft = ref<string>("");
 const chat = ref<ChatMessageType[]>([]);
 
 function fetchMessages() {
-   fetch("http://localhost:8090/api/v1/messages", {
+   fetch("/api/v1/messages", {
       method: "GET",
    })
       .then(response => response.json())
@@ -35,7 +35,7 @@ async function sendMessage() {
 
    chat.value.push(new_message);
 
-   const returned_message = await fetch("http://localhost:8090/api/v1/messages", {
+   const returned_message = await fetch("/api/v1/messages", {
       method: "POST",
       headers: {
          "Content-Type": "application/json",

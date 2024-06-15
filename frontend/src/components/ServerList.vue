@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 const servers = [
    {
-      url: "http://localhost:8090",
+      url: "http://localhost",
       id: 1,
    },
 ];

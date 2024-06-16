@@ -5,25 +5,12 @@
 
 #include "CorsMiddleware.h"
 #include "iostream"
+#include "lib/JsonBodyHandling.h"
 
 using namespace drogon;
 
-Json::Value getJsonBody(const HttpRequestPtr &req) {
-  std::string body = std::string(req->getBody());
-  Json::Value json_body;
-  Json::Reader reader;
-  bool parsingSuccessful =
-      reader.parse(body, json_body);  // Use Json::Reader to parse the string
-  if (!parsingSuccessful) {
-    // Handle parsing error
-    std::cerr << "Failed to parse JSON" << std::endl;
-    return Json::Value();
-  }
-  return json_body;
-}
-
 class BasicController : public HttpController<BasicController, false> {
- public:
+public:
   METHOD_LIST_BEGIN
   // cors options request to any path
 

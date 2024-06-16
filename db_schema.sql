@@ -15,6 +15,13 @@ CREATE TABLE decencord_server.messages (
     FOREIGN KEY (user_id) REFERENCES decencord_server.users(id)
 );
 
+CREATE TABLE decencord_server.sessions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES decencord_server.users(id)
+);
+
 -- Add some test data
 
 INSERT INTO decencord_server.users (username, password) VALUES ('Alice', 'password1');

@@ -6,16 +6,19 @@
 #include "iostream"
 using namespace drogon;
 
+#include "AuthController.h"
 #include "BasicController.h"
 
 int main() {
   std::cout << "Hello, World!" << std::endl;
 
-  auto ctrlPtr = std::make_shared<BasicController>();
+  auto basicControllerPtr = std::make_shared<BasicController>();
+  auto authControllerPtr = std::make_shared<AuthController>();
 
   // from  configfile
   app()
-      .registerController<BasicController>(ctrlPtr)
+      .registerController<BasicController>(basicControllerPtr)
+      .registerController<AuthController>(authControllerPtr)
       .loadConfigFile("../src/config.json")
       .run();
 }

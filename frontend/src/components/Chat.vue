@@ -55,12 +55,15 @@ async function sendMessage() {
 <template>
    <div class="chat">
       <h2>Chat</h2>
-      <div v-for="message in chat" :key="message.id">
-         <ChatMessage :content="message.content" :sender="message.user_id" :client-username="me" />
+      <div class="flex gap-3 flex-col">
+         <div v-for="message in chat" :key="message.id">
+            <ChatMessage :content="message.content" :sender="message.user_id" :client-username="me" />
+         </div>
       </div>
-
-      <input type="text" placeholder="Type a message..." v-model="message_draft" />
-      <button @click="sendMessage">Send</button>
+      <div class="flex gap-3">
+         <input type="text" placeholder="Type a message..." v-model="message_draft" class="border rounded p-1" />
+      <button @click="sendMessage" class="bg-blue-700 p-3 rounded text-white">Send</button>
+      </div>
    </div>
 </template>
 

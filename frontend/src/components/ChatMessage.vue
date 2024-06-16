@@ -7,19 +7,16 @@ const props = defineProps<{
 </script>
 
 <template>
-   <div class="chat-message" :class="{ 'sent-by-me': props.sender === props.clientUsername }">
-      <h3>{{ props.sender }}</h3>
+   <div class="flex justify-end" :class="{ 'justify-start text-3xl': props.sender === props.clientUsername,
+   'justify-end': props.sender !== props.clientUsername
+    }">
+      <div class="bg-blue-500 rounded p-1 text-white">
+         <h3>{{ props.sender }}</h3>
       <p>{{ props.content }}</p>
+      </div>
    </div>
 </template>
 
 <style scoped lang="scss">
-.chat-message {
-   border: 1px solid black;
-   margin: 1rem;
 
-   &.sent-by-me {
-      background-color: rgb(47, 47, 47);
-   }
-}
 </style>

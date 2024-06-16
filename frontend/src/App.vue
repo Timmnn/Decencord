@@ -3,9 +3,8 @@ import ServerList from "./components/ServerList.vue";
 </script>
 
 <template>
-   <h1>Decencord</h1>
+   <h1 class="text-3xl">Decencord</h1>
 
-   <ServerList />
    <RouterView />
 </template>
 

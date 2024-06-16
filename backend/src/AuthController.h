@@ -12,6 +12,7 @@ class AuthController : public HttpController<AuthController, false> {
 public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(AuthController::NewSession, "/api/v1/login", Post);
+  ADD_METHOD_TO(AuthController::CheckSession, "/api/v1/is-logged-in", Get);
   METHOD_LIST_END
 
   void NewSession(const HttpRequestPtr &req,
@@ -84,4 +85,37 @@ public:
     auto resp = HttpResponse::newHttpJsonResponse(json);
     callback(resp);
   };
+
+  void CheckSession(const HttpRequestPtr &req,
+                    std::function<void(const HttpResponsePtr &)> &&callback) {
+    auto session_id = req->getSession()->sessionId();
+    auto c = connectToDb();
+
+    pqxx::work tx{c};
+
+    c.prepare("CHECK_SESSION",
+              "SELECT user_id FROM decencord_server.sessions WHERE id = $1");
+
+    auto r = tx.exec_prepared("CHECK_SESSION", session_id);
+
+    bool session_exists = r.size() > 0;
+
+    if (!session_exists) {
+      Json::Value json;
+      json["success"] = false;
+      json["message"] = "Not logged in";
+
+      auto resp = HttpResponse::newHttpJsonResponse(json);
+      resp->setStatusCode(k401Unauthorized);
+      callback(resp);
+      return;
+    }
+
+    Json::Value json;
+    json["success"] = true;
+    json["message"] = "Logged in";
+
+    auto resp = HttpResponse::newHttpJsonResponse(json);
+    callback(resp);
+  }
 };

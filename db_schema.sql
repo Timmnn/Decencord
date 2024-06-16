@@ -3,6 +3,7 @@ CREATE SCHEMA decencord_server;
 CREATE TABLE decencord_server.users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -16,9 +17,9 @@ CREATE TABLE decencord_server.messages (
 
 -- Add some test data
 
-INSERT INTO decencord_server.users (username) VALUES ('Alice');
-INSERT INTO decencord_server.users (username) VALUES ('Bob');
-INSERT INTO decencord_server.users (username) VALUES ('Charlie');
+INSERT INTO decencord_server.users (username, password) VALUES ('Alice', 'password1');
+INSERT INTO decencord_server.users (username, password) VALUES ('Bob', 'password2');
+INSERT INTO decencord_server.users (username, password) VALUES ('Charlie', 'password3');
 
 INSERT INTO decencord_server.messages (user_id, content) VALUES (1, 'Hello, world!');
 INSERT INTO decencord_server.messages (user_id, content) VALUES (2, 'Hi, Alice!');

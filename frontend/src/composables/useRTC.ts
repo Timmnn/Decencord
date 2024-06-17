@@ -9,12 +9,33 @@ export default function useRTC() {
    };
    const peer_connection = new RTCPeerConnection(stun_servers);
 
+   peer_connection.oniceconnectionstatechange = () => {
+      console.log(`ICE Connection State: ${peer_connection.iceConnectionState}`);
+   };
+
+   peer_connection.ontrack = event => {
+      console.log("ontrack event received", event);
+      if (!streams.remote) {
+         streams.remote = new MediaStream();
+      }
+      if (event.track.kind === "video") {
+         console.log("Adding video track to remote stream");
+         streams.remote.addTrack(event.track);
+         const remote_video = document.querySelector(".remote-stream") as HTMLVideoElement;
+         remote_video.srcObject = streams.remote;
+      }
+   };
+
    const streams = {
       local: null,
-      remote: [],
-   } as { local: MediaStream | null; remote: MediaStream[] };
+      remote: null,
+   } as { local: MediaStream | null; remote: MediaStream | null };
 
-   function startLocalStream() {
+   const offerCandidates = [] as RTCIceCandidate[];
+
+   let offer_x = null;
+
+   function sendOffer() {
       if (!navigator.mediaDevices.getUserMedia) {
          alert("getUserMedia not supported");
          return;
@@ -24,116 +45,200 @@ export default function useRTC() {
             video: true,
             audio: true,
          })
-         .then(stream => {
+         .then(async stream => {
             streams.local = stream;
 
             stream.getTracks().forEach(track => {
                peer_connection.addTrack(track, stream);
             });
 
-            makeOffer();
+            const local_video = document.querySelector(".local-stream") as HTMLVideoElement;
+            local_video.srcObject = stream;
+
+            const offer = await peer_connection.createOffer();
+
+            console.log("offer", offer);
+            peer_connection.onicecandidate = event => {
+               if (!event.candidate) return;
+
+               offerCandidates.push(event.candidate);
+
+               console.log("event.candidate", event.candidate);
+
+               fetch("/api/v1/rtc/offer-candidates", {
+                  method: "POST",
+                  headers: {
+                     "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                     candidate: JSON.stringify(event.candidate),
+                     channel_id: "1",
+                  }),
+               });
+            };
+            await peer_connection.setLocalDescription(offer);
+
+            fetch("/api/v1/rtc/offers", {
+               method: "POST",
+               headers: {
+                  "Content-Type": "application/json",
+               },
+               body: JSON.stringify({
+                  offer: {
+                     type: offer.type,
+                     sdp: offer.sdp,
+                  },
+                  channel_id: "1",
+               }),
+            });
          })
          .catch(err => {
             console.error("Error getting user media", err);
          });
    }
 
-   function listenForRemoteStream() {
-      peer_connection.ontrack = event => {
-         for (const stream of event.streams) {
-            const corresponding_stream = streams.remote.find(s => s.id === stream.id);
-            if (corresponding_stream) {
-               stream.getTracks().forEach(track => {
-                  corresponding_stream.addTrack(track);
-               });
-            }
-         }
-      };
-   }
-
-   const offerCandidates = [] as RTCIceCandidate[];
-
-   async function makeOffer() {
-      const offer = await peer_connection.createOffer();
+   async function sendAnswer() {
+      const answer_candidates = [] as RTCIceCandidate[];
       peer_connection.onicecandidate = event => {
-         if(!event.candidate) return;
+         if (!event.candidate) return;
 
-         offerCandidates.push(event.candidate);
+         answer_candidates.push(event.candidate);
 
-         fetch("/api/v1/add-ice-candidate", {
+         fetch("/api/v1/rtc/answer-candidates", {
             method: "POST",
             headers: {
                "Content-Type": "application/json",
             },
             body: JSON.stringify({
-               candidate: event.candidate.toJSON(),
-               channel_id: "1"
+               candidate: JSON.stringify(event.candidate),
+               channel_id: "1",
             }),
          });
       };
-      await peer_connection.setLocalDescription(offer);
 
-      fetch("/api/v1/make-offer", {
-         method: "POST",
-         headers: {
-            "Content-Type": "application/json",
-         },
-         body: JSON.stringify({
-            offer: {
-               type: offer.type,
-               sdp: offer.sdp,
-            },
-            channel_id: "1"
-         }),
-      });
+      for (const candidate of offerCandidates) {
+         console.log("candidate", candidate);
+         await peer_connection.addIceCandidate(candidate);
+      }
 
-      // wait for answer using websocket
+      navigator.mediaDevices
+         .getUserMedia({
+            video: true,
+            audio: true,
+         })
+         .then(async stream => {
+            streams.local = stream;
 
+            stream.getTracks().forEach(track => {
+               peer_connection.addTrack(track, stream);
+            });
 
+            const local_video = document.querySelector(".local-stream") as HTMLVideoElement;
+            local_video.srcObject = stream;
+
+            const answer = await peer_connection.createAnswer();
+            console.log("answer", answer);
+            await peer_connection.setLocalDescription(answer);
+
+            fetch("/api/v1/rtc/answers", {
+               method: "POST",
+               headers: {
+                  "Content-Type": "application/json",
+               },
+               body: JSON.stringify({
+                  answer: {
+                     type: answer.type,
+                     sdp: answer.sdp,
+                  },
+                  channel_id: "1",
+               }),
+            });
+         })
+         .catch(err => {
+            console.error("Error getting user media", err);
+         });
    }
 
-
-   async function fetchOffers() {
+   async function getOffers() {
       const response = await fetch("/api/v1/rtc/offers", {
          method: "GET",
       });
-      const offers = await response.json();
+      const body = await response.json();
 
-      if(offers.length === 0) {
-         setTimeout(fetchOffers, 5000);
-         return;
-      }
+      console.log("body", body);
 
-      makeAnswer(offers.answers[0].offer);
-   }
-
-
-   async function makeAnswer(offer_str: string) {
-      console.log("making answer", offer_str);
+      if (body.offers.length === 0) return;
       const offer = new RTCSessionDescription({
          type: "offer", // Since you're dealing with an offer
-         sdp: offer_str
-     });
+         sdp: body.offers[0].offer,
+      });
+
+      offer_x = offer;
       await peer_connection.setRemoteDescription(offer);
 
-      const answer = await peer_connection.createAnswer();
-      await peer_connection.setLocalDescription(answer);
+      const video = document.querySelector(".remote-stream") as HTMLVideoElement;
+      streams.remote = new MediaStream();
+      video.srcObject = streams.remote;
 
-      fetch("/api/v1/rtc/answer", {
-         method: "POST",
-         headers: {
-            "Content-Type": "application/json",
-         },
-         body: JSON.stringify({
-            answer: {
-               type: answer.type,
-               sdp: answer.sdp,
-            },
-            channel_id: "1"
-         }),
+      // fetch offer candidates
+      const response2 = await fetch("/api/v1/rtc/offer-candidates", {
+         method: "GET",
       });
+
+      const body2 = await response2.json();
+
+      console.log("body2.candidates", body2.candidates);
+
+      for (const candidate of body2.candidates) {
+         const cand_json = JSON.parse(candidate.candidate);
+         const iceCandidate = new RTCIceCandidate({
+            candidate: cand_json.candidate,
+            sdpMid: cand_json.sdpMid,
+            sdpMLineIndex: cand_json.sdpMLineIndex,
+         });
+         offerCandidates.push(iceCandidate);
+         await peer_connection.addIceCandidate(iceCandidate);
+      }
    }
 
+   async function getAnswers() {
+      const response = await fetch("/api/v1/rtc/answers", {
+         method: "GET",
+      });
+      const body = await response.json();
+
+      if (body.answers.length === 0) return;
+      console.log("body.answers", body);
+      const answer = new RTCSessionDescription({
+         type: "answer", // Since you're dealing with an answer
+         sdp: body.answers[0].answer,
+      });
+
+      await peer_connection.setRemoteDescription(answer);
+
+      // fetch answer candidates
+      const response2 = await fetch("/api/v1/rtc/answer-candidates", {
+         method: "GET",
+      });
+
+      const body2 = await response2.json();
+
+      console.log("body2.candidates", body2.candidates);
+
+      for (const candidate of body2.candidates) {
+         console.log("candidate", candidate);
+         const cand_json = JSON.parse(candidate.candidate);
+         const iceCandidate = new RTCIceCandidate({
+            candidate: cand_json.candidate,
+            sdpMid: cand_json.sdpMid,
+            sdpMLineIndex: cand_json.sdpMLineIndex,
+         });
+         await peer_connection.addIceCandidate(iceCandidate);
+      }
+
+      const video = document.querySelector(".remote-stream") as HTMLVideoElement;
+      streams.remote = new MediaStream();
+   }
 
    function showStream(stream: MediaStream, videoElement: HTMLVideoElement) {
       videoElement.srcObject = stream;
@@ -142,9 +247,10 @@ export default function useRTC() {
    return {
       peer_connection,
       streams,
-      startLocalStream,
-      listenForRemoteStream,
+      sendOffer,
       showStream,
-      fetchOffers,
+      getOffers,
+      sendAnswer,
+      getAnswers,
    };
 }

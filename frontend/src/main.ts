@@ -10,11 +10,19 @@ import IndexView from "./views/IndexView.vue";
 
 import AppLayout from "./layouts/AppLayout.vue";
 import EmptyLayout from "./layouts/EmptyLayout.vue";
+import VoiceChannelView from "./views/VoiceChannelView.vue";
 
 let routes = [
    {
       path: "/text-channel",
       component: TextChannelView,
+      meta: {
+         layout: AppLayout,
+      },
+   },
+   {
+      path: "/voice-channel",
+      component: VoiceChannelView,
       meta: {
          layout: AppLayout,
       },

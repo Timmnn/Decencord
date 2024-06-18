@@ -49,8 +49,9 @@ export class WebSocketConnection {
    }
 }
 
-export function useWSSync() {
+export async function useWSSync() {
    const store = useStore();
+   await store.ws_connection.connect();
 
    store.ws_connection.addEventListener(
       "channel_update",

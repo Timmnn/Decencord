@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { useStore } from "../composables/useStore";
+import { ref } from "vue";
 
 const store = useStore();
 
 const channels = store.channels;
 
 const active_channel = store.active_channel;
+
+const custom_user_id = ref<string>("");
+
+function setCustomUserId() {
+   store.$state.user.id = custom_user_id.value;
+}
 </script>
 
 <template>
@@ -26,6 +33,10 @@ const active_channel = store.active_channel;
                   </div>
                </div>
             </div>
+         </div>
+         <div id="id-input">
+            <input v-model="custom_user_id" type="text" placeholder="User ID" class="w-full p-1" />
+            <button class="w-full p-1 bg-blue-500 text-white" @click="setCustomUserId">Set</button>
          </div>
       </div>
       <slot></slot>

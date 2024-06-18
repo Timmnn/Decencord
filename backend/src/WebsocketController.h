@@ -39,7 +39,10 @@ class WebsocketController
     : public drogon::WebSocketController<WebsocketController, false> {
 public:
   vector<shared_ptr<WebSocketConnection>> connections;
-  map<string, vector<string>> channel_clients;
+  map<string, vector<string>> channel_clients = {
+      {"1", {}},
+      {"2", {}},
+  };
   void handleNewMessage(const WebSocketConnectionPtr &con, string &&msg,
                         const WebSocketMessageType &type) override {
     auto json_in = JsonFactory::fromString(msg);
@@ -48,13 +51,40 @@ public:
 
     if (json_in["event"] == "join_channel") {
       handleJoinChannelMessage(con, json_in);
+    } else if (json_in["event"] == "leave_channel") {
+      handleLeaveChannelMessage(con, json_in);
+    } else {
+      cout << "Unknown event: " << json_in["event"].asString() << endl;
     }
   }
+
+  Json::Value generateChannelUpdateEvent(string channel_id) {
+    auto channel_join_msg =
+        JsonFactory::init()
+            ->add("event", "channel_update")
+            ->add("data", JsonFactory::init()
+                              ->add("channel_id", channel_id)
+                              ->add("users", channel_clients[channel_id])
+                              ->result)
+            ->result;
+
+    return channel_join_msg;
+  }
+
   void handleNewConnection(const HttpRequestPtr &req,
                            const WebSocketConnectionPtr &con) override {
     cout << "New connection" << endl;
+
     connections.push_back(con);
+
+    // inform about all channels
+    for (auto &channel : channel_clients) {
+      cout << "Channel: " << channel.first << endl;
+      auto channel_join_msg = generateChannelUpdateEvent(channel.first);
+      con->send(channel_join_msg.toStyledString());
+    }
   }
+
   void handleConnectionClosed(const WebSocketConnectionPtr &con) override {
     cout << "Connection closed" << endl;
     connections.erase(remove(connections.begin(), connections.end(), con),
@@ -114,6 +144,31 @@ public:
             ->result;
 
     sendToAllClients(channel_join_msg);
+  }
+
+  void handleLeaveChannelMessage(const WebSocketConnectionPtr &con,
+                                 Json::Value &json_in) {
+    string channel_id = json_in["data"]["channel_id"].asString();
+    string user_id = json_in["data"]["user_id"].asString();
+
+    // remove user from channel
+    channel_clients[channel_id].erase(
+        remove(channel_clients[channel_id].begin(),
+               channel_clients[channel_id].end(), user_id),
+        channel_clients[channel_id].end());
+
+    // send message to all clients
+
+    auto channel_leave_msg =
+        JsonFactory::init()
+            ->add("event", "channel_update")
+            ->add("data", JsonFactory::init()
+                              ->add("channel_id", channel_id)
+                              ->add("users", channel_clients[channel_id])
+                              ->result)
+            ->result;
+
+    sendToAllClients(channel_leave_msg);
   }
 
   WS_PATH_LIST_BEGIN

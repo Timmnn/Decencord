@@ -56,7 +56,10 @@ function userChangedRoom(room: Room, user: string) {
 }
 
 function createPeer(id: string) {
-   peer.value = new Peer(id);
+   peer.value = new Peer(id, {
+      host: window.location.hostname,
+      path: "/peer-server",
+   });
    peer.value.on("call", call => {
       navigator.mediaDevices
          .getUserMedia({ video: true, audio: true })

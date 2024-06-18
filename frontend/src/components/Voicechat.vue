@@ -10,21 +10,50 @@ const peer_id = ref<string>("");
 
 const user = ref<string>("");
 
+const ws_connection = ref<WebSocket | null>(null);
+
 interface Room {
    name: string;
-   users: string[];
+   users: Set<string>;
 }
 
 const rooms = ref<Room[]>([
    {
       name: "Room 1",
-      users: ["User 1", "User 2", "User 3"],
+      users: new Set(),
    },
    {
       name: "Room 2",
-      users: ["User 4", "User 5", "User 6"],
+      users: new Set(),
    },
 ]);
+
+onMounted(() => {
+   ws_connection.value = new WebSocket(
+      "wss://" + window.location.hostname + ":" + window.location.port + "/api/v1/ws"
+   );
+
+   ws_connection.value.onopen = () => {
+      console.log("Connected to the WS server");
+   };
+
+   ws_connection.value.onmessage = event => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === "join") {
+         const room = rooms.value.find(r => r.name === data.room);
+         if (room) {
+            userChangedRoom(room, data.user);
+         }
+      }
+   };
+});
+
+function userChangedRoom(room: Room, user: string) {
+   const current_room = rooms.value.find(r => r.users.has(user));
+   current_room?.users.delete(user);
+   room.users.add(user);
+}
 
 function createPeer(id: string) {
    peer.value = new Peer(id);
@@ -52,11 +81,13 @@ function join_room(room: Room) {
 
    createPeer(user.value + room.name);
 
-   for (const user of room.users) {
-      call(user);
-   }
+   const current_room = rooms.value.find(r => r.users.has(user.value));
+   current_room?.users.delete(user.value);
 
-   room.users.push(user.value);
+   userChangedRoom(room, user.value);
+
+   //TODO: user shouldnt be set by the client
+   ws_connection.value?.send(JSON.stringify({ type: "join", user: user.value, room: room.name }));
 }
 
 function call(id: string) {
@@ -80,6 +111,7 @@ function call(id: string) {
 <template>
    <div>
       <input type="text" name="" v-model="user" placeholder="Your Name" />
+      <button class="btn" @click="createPeer">Set Name</button>
       <h1>Voicechat</h1>
 
       <input type="text" name="" id="peer_id" v-model="peer_id" placeholder="Your ID" />
@@ -99,7 +131,7 @@ function call(id: string) {
             <div class="flex flex-col gap-1">
                <div v-for="user in room.users" class="outline outline-red-400">{{ user }}</div>
             </div>
-            <button class="btn">Join</button>
+            <button class="btn" @click="join_room(room)">Join</button>
             <div></div>
          </div>
       </div>

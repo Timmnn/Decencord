@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import ServerList from "./components/ServerList.vue";
+import { useWSSync } from "./composables/useWSSync";
+
+useWSSync();
 </script>
 
 <template>
-   <h1 class="text-3xl">Decencord</h1>
-
-   <RouterView />
+   <component :is="$router.currentRoute.value.meta.layout">
+      <router-view />
+   </component>
 </template>
 
 <style scoped lang="scss"></style>

@@ -55,22 +55,31 @@ export async function useWSSync() {
 
    store.ws_connection.addEventListener(
       "channel_update",
-      (data: { channel_id: string; users: string[] }) => {
-         const channel = store.channels.find(channel => channel.id === data.channel_id);
+      async (data: { channel_id: string; users: string[] }) => {
+         const channels = await store.channels;
+         const channel = channels.find(channel => channel.id === data.channel_id);
          if (!channel)
             throw new Error(
                "Channel not found, id: " +
-                  data.id +
+                  data.channel_id +
                   " expected one of: " +
                   store.channels.map(channel => channel.id).join(", ")
             );
 
-         console.log("Updating channel", channel.name, "with users", data.users);
+         const leaving_users = new Set(channel.users);
+         leaving_users.forEach(user_id => store.stopCall(user_id));
+
          channel.users = new Set(data.users);
 
-         if (channel.users.has(store.user.id)) {
+         const user = await store.user;
+
+         if (channel.users.has(user.id)) {
             store.active_channel = channel;
          }
       }
    );
+
+   store.ws_connection.addEventListener("channels", (data: { channels: Channel[] }) => {
+      store.channels = data.channels;
+   });
 }

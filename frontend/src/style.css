@@ -5,6 +5,15 @@
 
 .btn {
    @apply bg-blue-500 text-white font-bold py-2 px-4 rounded;
+
+   &:hover {
+      @apply bg-blue-700;
+   }
+
+   &:focus {
+      @apply ring-blue-300 ring-4;
+   }
+
 }
 
 #app{

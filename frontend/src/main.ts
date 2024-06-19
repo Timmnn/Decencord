@@ -7,27 +7,38 @@ import { createPinia } from "pinia";
 
 import TextChannelView from "./views/TextChannelView.vue";
 import IndexView from "./views/IndexView.vue";
+import VoiceChannelView from "./views/VoiceChannelView.vue";
+import LoginView from "./views/LoginView.vue";
 
 import AppLayout from "./layouts/AppLayout.vue";
 import EmptyLayout from "./layouts/EmptyLayout.vue";
-import VoiceChannelView from "./views/VoiceChannelView.vue";
 
 let routes = [
    {
-      path: "/text-channel",
+      path: "/channels/v/:channel_id",
+      component: VoiceChannelView,
+      meta: {
+         layout: AppLayout,
+      },
+   },
+   {
+      path: "/channels/t/:channel_id",
       component: TextChannelView,
       meta: {
          layout: AppLayout,
       },
    },
    {
-      path: "/voice-channel",
-      component: VoiceChannelView,
+      path: "/login",
+      component: LoginView,
+   },
+   {
+      path: "/",
+      component: IndexView,
       meta: {
          layout: AppLayout,
       },
    },
-   { path: "/", component: IndexView },
 ];
 
 routes = routes.map(route => {
@@ -41,6 +52,10 @@ routes = routes.map(route => {
 });
 
 const pinia = createPinia();
+
+pinia.use(ctx => {
+   ctx.store.$router = router;
+});
 
 const router = createRouter({
    history: createWebHistory(),

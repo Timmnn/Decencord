@@ -4,9 +4,7 @@ import { ref, onMounted } from "vue";
 
 const remote_video = ref<HTMLVideoElement | null>(null);
 
-const called_id = ref<string>("");
 const peer = ref<Peer | null>(null);
-const peer_id = ref<string>("");
 
 const user = ref<string>("");
 
@@ -56,6 +54,7 @@ function userChangedRoom(room: Room, user: string) {
 }
 
 function createPeer(id: string) {
+   return;
    peer.value = new Peer(id, {
       host: window.location.hostname,
       path: "/peer-server",
@@ -92,38 +91,11 @@ function join_room(room: Room) {
    //TODO: user shouldnt be set by the client
    ws_connection.value?.send(JSON.stringify({ type: "join", user: user.value, room: room.name }));
 }
-
-function call(id: string) {
-   navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then(stream => {
-         const call = peer.value.call(id, stream);
-         call.on("stream", remoteStream => {
-            // Show stream in some <video> element.
-            if (remote_video.value) {
-               remote_video.value.srcObject = remoteStream;
-            }
-         });
-      })
-      .catch(err => {
-         console.error("Failed to get local stream", err);
-      });
-}
 </script>
 
 <template>
    <div>
       <input type="text" name="" v-model="user" placeholder="Your Name" />
-      <button class="btn" @click="createPeer">Set Name</button>
-      <h1>Voicechat</h1>
-
-      <input type="text" name="" id="peer_id" v-model="peer_id" placeholder="Your ID" />
-
-      <input type="text" name="" id="call_id" v-model="called_id" placeholder="Call ID" />
-
-      <button class="btn" @click="createPeer">Create Peer</button>
-
-      <button class="btn" @click="call">Start Call</button>
 
       <video autoplay ref="remote_video"></video>
 

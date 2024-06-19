@@ -33,8 +33,6 @@ export default function useRTC() {
 
    const offerCandidates = [] as RTCIceCandidate[];
 
-   let offer_x = null;
-
    function sendOffer() {
       if (!navigator.mediaDevices.getUserMedia) {
          alert("getUserMedia not supported");
@@ -173,7 +171,6 @@ export default function useRTC() {
          sdp: body.offers[0].offer,
       });
 
-      offer_x = offer;
       await peer_connection.setRemoteDescription(offer);
 
       const video = document.querySelector(".remote-stream") as HTMLVideoElement;
@@ -236,7 +233,6 @@ export default function useRTC() {
          await peer_connection.addIceCandidate(iceCandidate);
       }
 
-      const video = document.querySelector(".remote-stream") as HTMLVideoElement;
       streams.remote = new MediaStream();
    }
 

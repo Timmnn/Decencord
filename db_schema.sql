@@ -22,10 +22,12 @@ CREATE TABLE decencord_server.sessions (
     FOREIGN KEY (user_id) REFERENCES decencord_server.users(id)
 );
 
+CREATE TYPE CHANNEL_TYPE AS ENUM ('voice', 'text');
 
 CREATE TABLE decencord_server.channels (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    type CHANNEL_TYPE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

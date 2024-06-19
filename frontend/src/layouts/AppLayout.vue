@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { useStore } from "../composables/useStore";
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 const store = useStore();
 
-const channels = store.channels;
+const channels = ref<any[]>([]);
 
-const active_channel = store.active_channel;
+const active_channel = computed(() => store.active_channel);
 
-const custom_user_id = ref<string>("");
+const users = ref<any[]>([]);
 
-function setCustomUserId() {
-   store.$state.user.id = custom_user_id.value;
-}
+onMounted(async () => {
+   store.users.then(data => {
+      users.value = data;
+   });
+
+   store.channels.then(data => {
+      channels.value = data;
+   });
+});
 </script>
 
 <template>
@@ -21,22 +27,32 @@ function setCustomUserId() {
          <div id="channels" class="flex flex-col gap-2">
             <div
                v-for="channel in channels"
-               class="hover:bg-blue-200 p-1"
-               :class="{ 'bg-blue-200': active_channel === channel }"
-               @click="store.joinChannel(channel.id)">
-               {{ channel.name }}
+               class="hover:bg-blue-300 bg-blue-200 p-1"
+               :class="{ 'bg-blue-200': active_channel === channel }">
+               <span
+                  >{{ channel.name }}
+
+                  <button
+                     class="btn"
+                     v-if="active_channel !== channel"
+                     @click="store.joinChannel(channel.id)">
+                     Join
+                  </button>
+                  <button
+                     class="btn"
+                     v-if="active_channel === channel"
+                     @click="store.leaveChannel()">
+                     Leave
+                  </button>
+               </span>
                <div id="channel-users">
                   <div
                      v-for="user in channel.users"
                      class="bg-blue-500 outline rounded-lg w-fit p-0.5">
-                     {{ user }}
+                     {{ users.find(u => u.id === user)?.name }}
                   </div>
                </div>
             </div>
-         </div>
-         <div id="id-input">
-            <input v-model="custom_user_id" type="text" placeholder="User ID" class="w-full p-1" />
-            <button class="w-full p-1 bg-blue-500 text-white" @click="setCustomUserId">Set</button>
          </div>
       </div>
       <slot></slot>

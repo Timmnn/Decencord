@@ -10,4 +10,5 @@ export interface Channel {
    type: string;
    id: string;
    users: Set<string>;
+   messages?: ChatMessage[];
 }

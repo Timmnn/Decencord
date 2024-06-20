@@ -201,7 +201,10 @@ export const useStore = defineStore("store", {
             .then(res => res.json())
             .then(response => {
                console.log("got channels", response.data);
-               for (const channel of response.data) {
+
+               state._channels = response.data;
+
+               for (const channel of state._channels) {
                   if (channel.type === "text") {
                      fetch(`/api/v1/messages?channel_id=${channel.id}`)
                         .then(res => res.json())
@@ -211,8 +214,6 @@ export const useStore = defineStore("store", {
                         });
                   }
                }
-
-               state._channels = response.data;
 
                return state._channels;
             });

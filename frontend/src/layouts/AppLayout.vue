@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useStore } from "../composables/useStore";
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
 const store = useStore();
 
@@ -17,6 +18,13 @@ onMounted(async () => {
    store.users.then(data => {
       users.value = data;
    });
+
+   // set active channel to the id in the URL https://example.com/channels/t/1
+   const route = useRoute();
+   const path = route.path.split("/").at(-1);
+   console.log("path", path);
+
+   store.joinChannel(path[path.length - 1]);
 });
 </script>
 

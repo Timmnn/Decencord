@@ -19,14 +19,20 @@ watch(store.active_calls, () => {
 </script>
 
 <template>
-   <div class="flex flex-col p-5 grow gap-5">
-      <video autoplay :srcObject="local_stream" class="outline w-full rounded grow basis-0"></video>
+   <div class="flex flex-col p-5 grow gap-5 items-start">
+      <video autoplay :srcObject="local_stream" class="outline rounded basis-0"></video>
       <video
          v-for="video in store.active_calls"
          autoplay
          :srcObject="video.stream"
-         class="outline rounded grow basis-0"></video>
+         class="outline rounded basis-0"></video>
    </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+video {
+   max-height: 100%;
+   max-width: 100%;
+   aspect-ratio: 4/3;
+}
+</style>

@@ -1,4 +1,6 @@
 backend/build
-frontend/node_modules
+**/node_modules
+backend/node_modules
+
 .vscode/
 frontend/dist

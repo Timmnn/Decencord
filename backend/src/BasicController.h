@@ -93,14 +93,16 @@ public:
       Json::Value json;
       json["messages"] = Json::arrayValue;
 
-      for (auto [content, user_id, created_at] :
-           tx.query<std::string, std::string, std::string>(
-               "SELECT content, user_id, created_at FROM "
-               "decencord_server.messages")) {
+      std::string channel_id = req->getParameter("channel_id");
+
+      for (const auto &row :
+           tx.exec_params("SELECT content, user_id, created_at FROM "
+                          "decencord_server.messages WHERE channel_id = $1",
+                          channel_id)) {
         Json::Value message;
-        message["content"] = content;
-        message["user_id"] = user_id;
-        message["created_at"] = created_at;
+        message["content"] = row["content"].as<std::string>();
+        message["user_id"] = row["user_id"].as<std::string>();
+        message["created_at"] = row["created_at"].as<std::string>();
         json["messages"].append(message);
       }
 
@@ -110,6 +112,9 @@ public:
       callback(resp);
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
+      auto resp = HttpResponse::newHttpResponse();
+      resp->setStatusCode(k500InternalServerError);
+      callback(resp);
     }
   }
 

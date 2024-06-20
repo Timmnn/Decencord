@@ -1,31 +1,32 @@
 <script setup lang="ts">
 import { useStore } from "../composables/useStore";
-import { ref, onMounted } from "vue";
+import { ref, watch } from "vue";
 
 const store = useStore();
 
-const localStreamVideo = ref<HTMLVideoElement | null>(null);
-const remoteStreamVideo = ref<HTMLVideoElement | null>(null);
-
-function onIncomingCall(local_stream: MediaStream, remote_stream: MediaStream) {
-   if (localStreamVideo.value) {
-      localStreamVideo.value.srcObject = local_stream;
-   }
-   if (remoteStreamVideo.value) {
-      remoteStreamVideo.value.srcObject = remote_stream;
-   }
-}
-
-onMounted(() => {
-   store.initPeer();
+const local_stream = ref<MediaStream | null>(null);
+store.local_stream.then(stream => {
+   if (!stream) return;
+   local_stream.value = stream;
 });
 
-store.setIncomingCallCallback(onIncomingCall);
+const active_calls = ref(store.active_calls);
+
+watch(store.active_calls, () => {
+   console.log("Watch active_calls", store.active_calls);
+   active_calls.value = store.active_calls;
+});
 </script>
 
 <template>
-   <video ref="localStreamVideo" autoplay class="outline w-1/3 h-1/3"></video>
-   <video ref="remoteStreamVideo" autoplay class="outline w-1/3 h-1/3"></video>
+   <div class="flex flex-col p-5 grow gap-5">
+      <video autoplay :srcObject="local_stream" class="outline w-full rounded grow basis-0"></video>
+      <video
+         v-for="video in store.active_calls"
+         autoplay
+         :srcObject="video.stream"
+         class="outline rounded grow basis-0"></video>
+   </div>
 </template>
 
 <style scoped lang="scss"></style>

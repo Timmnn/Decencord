@@ -56,6 +56,7 @@ export async function useWSSync() {
    store.ws_connection.addEventListener(
       "channel_update",
       async (data: { channel_id: string; users: string[] }) => {
+         console.log("Channel update", data);
          const channels = await store.channels;
          const channel = channels.find(channel => channel.id === data.channel_id);
          if (!channel)
@@ -66,6 +67,7 @@ export async function useWSSync() {
                   store.channels.map(channel => channel.id).join(", ")
             );
 
+         // Stop all calls with users that are no longer in the channel
          const leaving_users = new Set(channel.users);
          leaving_users.forEach(user_id => store.stopCall(user_id));
 
@@ -75,9 +77,22 @@ export async function useWSSync() {
 
          if (channel.users.has(user.id)) {
             store.active_channel = channel;
+            store.callEveryoneInChannel();
          }
       }
    );
+
+   store.ws_connection.addEventListener("new_message", async (data: any) => {
+      const channel = (await store.channels).find(channel => channel.id === data.channel_id);
+      if (!channel) return;
+      if (!channel.messages) channel.messages = [];
+      channel.messages.push({
+         user_id: data.user_id,
+         content: data.message,
+         created_at: new Date(),
+         id: Math.random().toString(36).substring(7),
+      });
+   });
 
    store.ws_connection.addEventListener("channels", (data: { channels: Channel[] }) => {
       store.channels = data.channels;

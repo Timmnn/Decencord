@@ -16,6 +16,6 @@
 
 }
 
-#app{
-   height: 100vh;
+#app, body, html {
+   height: 100%
 }

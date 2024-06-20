@@ -3,6 +3,9 @@ import type { Channel } from "../types";
 import { WebSocketConnection } from "./useWSSync";
 import { Peer, MediaConnection } from "peerjs";
 import { useRouter } from "vue-router";
+
+type Call = MediaConnection & { stream?: MediaStream };
+
 export const useStore = defineStore("store", {
    state: () => ({
       // TODO: initialize empty and load from server
@@ -10,10 +13,11 @@ export const useStore = defineStore("store", {
       // TODO: get user from server
       _user: null as { id: string; name: string } | null,
       peer: null as Peer | null,
-      active_calls: [] as MediaConnection[],
+      active_calls: [] as Call[],
       _users: [] as { id: string; name: string }[],
       ws_connection: new WebSocketConnection(),
       active_channel: null as Channel | null,
+      _local_stream: null as MediaStream | null,
       incoming_call_callback: null as
          | ((local_stream: MediaStream, remote_stream: MediaStream) => void)
          | null,
@@ -41,6 +45,16 @@ export const useStore = defineStore("store", {
          this.$router.push(`/channels/${channel_type}/${channel_id}`);
       },
 
+      async callEveryoneInChannel() {
+         if (!this.active_channel) return;
+         const user = await this.user;
+         for (const user_id of this.active_channel.users) {
+            if (user_id === user.id || this.active_calls.find(call => call.peer === user_id))
+               continue;
+            this.callUser(user_id);
+         }
+      },
+
       async leaveChannel() {
          const channel_id = this.active_channel?.id;
          const user = await this.user;
@@ -53,6 +67,13 @@ export const useStore = defineStore("store", {
          this.$router.push("/");
       },
 
+      sendMessage(message: string) {
+         this.ws_connection.sendEvent("send_message", {
+            message,
+            channel_id: this.active_channel?.id,
+         });
+      },
+
       stopAllCalls() {
          for (const call of this.active_calls) {
             call.close();
@@ -63,24 +84,31 @@ export const useStore = defineStore("store", {
       stopCall(user_id: string) {
          const call = this.active_calls.find(call => call.peer === user_id);
          if (call) call.close();
+         this.active_calls = this.active_calls.filter(call => call.peer !== user_id);
       },
 
       callUser(user_id: string) {
          console.log("calling user", user_id);
          if (!this.peer || this.peer.id === user_id) this.initPeer();
 
+         user_id = user_id.toString();
          navigator.mediaDevices
             .getUserMedia({ video: true, audio: true })
             .then(stream => {
                if (!this.peer) throw new Error("Peer not initialized");
-               const call = this.peer.call(user_id, stream);
+               const call = this.peer.call(user_id, stream) as Call;
                call.on("stream", remoteStream => {
                   console.log("got remote stream", remoteStream);
-                  if (this.incoming_call_callback)
-                     this.incoming_call_callback(stream, remoteStream);
+                  for (const c of this.active_calls) {
+                     if (c.id === call.id) {
+                        c.stream = remoteStream;
+                     }
+                  }
                });
 
-               this.active_calls.push(call);
+               if (!this.active_calls.find(ex_call => ex_call.id === call.id)) {
+                  this.active_calls.push(call);
+               }
             })
             .catch(err => {
                console.error("Failed to get local stream", err);
@@ -93,8 +121,17 @@ export const useStore = defineStore("store", {
          this.incoming_call_callback = callback;
       },
 
+      async fetchMessages(channel_id: string) {
+         return await fetch(`/api/v1/messages?channel_id=${channel_id}`)
+            .then(res => res.json())
+            .then(response => {
+               return response.messages;
+            });
+      },
+
       async initPeer() {
          const user = await this.user;
+         console.log("DBG_a init peer", user);
          console.log("DBG_A init peer", user.id);
          this.peer = new Peer(user.id, {
             host: window.location.hostname,
@@ -106,15 +143,16 @@ export const useStore = defineStore("store", {
                .getUserMedia({ video: true, audio: true })
                .then(stream => {
                   call.answer(stream); // Answer the call with an A/V stream.
-                  call.on("stream", remoteStream => {
-                     if (this.incoming_call_callback)
-                        this.incoming_call_callback(stream, remoteStream);
-                  });
                })
                .catch(err => {
                   console.error("Failed to get local stream", err);
                });
          });
+      },
+
+      getUsername(user_id: string) {
+         const user = this._users.find(user => user.id === user_id);
+         return user?.name || "Unknown";
       },
    },
 
@@ -127,8 +165,8 @@ export const useStore = defineStore("store", {
             .then(response => {
                console.log("got user", response);
                state._user = {
-                  id: response.user_id,
-                  name: response.username,
+                  id: response.data.id,
+                  name: response.data.username,
                };
                return state._user;
             })
@@ -147,8 +185,8 @@ export const useStore = defineStore("store", {
             .then(res => res.json())
 
             .then(response => {
-               console.log("got users", response.users);
-               state._users = response.users.map((user: any) => ({
+               console.log("got users", response.data);
+               state._users = response.data.map((user: any) => ({
                   id: user.id,
                   name: user.username,
                }));
@@ -158,12 +196,38 @@ export const useStore = defineStore("store", {
 
       channels: async state => {
          if (state._channels.length > 0) return state._channels;
+         console.log("fetching channels");
          return await fetch("/api/v1/channels")
             .then(res => res.json())
             .then(response => {
-               console.log("got channels", response.channels);
-               state._channels = response.channels;
+               console.log("got channels", response.data);
+               for (const channel of response.data) {
+                  if (channel.type === "text") {
+                     fetch(`/api/v1/messages?channel_id=${channel.id}`)
+                        .then(res => res.json())
+                        .then(response => {
+                           console.log("got messages", response.data);
+                           channel.messages = response.data;
+                        });
+                  }
+               }
+
+               state._channels = response.data;
+
                return state._channels;
+            });
+      },
+
+      local_stream: async state => {
+         if (state._local_stream) return state._local_stream;
+         return await navigator.mediaDevices
+            .getUserMedia({ video: true, audio: true })
+            .then(stream => {
+               state._local_stream = stream;
+               return stream;
+            })
+            .catch(err => {
+               console.error("Failed to get local stream", err);
             });
       },
    },
